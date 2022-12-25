@@ -6,100 +6,236 @@
 /*   By: mfirdous <mfirdous@student.42abudhabi.a    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2022/12/22 14:21:57 by mfirdous          #+#    #+#             */
-/*   Updated: 2022/12/22 22:04:40 by mfirdous         ###   ########.fr       */
+/*   Updated: 2022/12/25 11:46:29 by mfirdous         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
+/**
+ * @todo
+ *	find solutions for fixing deadlock
+ * 	use a mutex to protect when a philo dies so that another philo doesnt start eating at the same time
+ *	remove forks from the array maybe
+ *	how to kill other threads - kill all if one dies?
+ *  release all mutexes when exiting a thread
+ *  find a way to check forks values without data race - pick up fork only if both are available
+ */
+
 #include "philo.h"
 
-int	ft_atoi(const char *nptr)
+// returns current time in ms
+size_t	print_timestamp(t_philo *p, char *msg, char *color)
 {
-	int	i;
-	int	sum;
-	int	sign;
+	struct timeval	time;
+	size_t			curr_time;
 
-	i = 0;
-	sum = 0;
-	sign = 1;
-	while ((nptr[i] >= 9 && nptr[i] <= 13) || nptr[i] == 32)
-		i++;
-	if (nptr[i] == '+' || nptr[i] == '-')
-	{
-		if (nptr[i] == '-')
-			sign = -1;
-		i++;
-	}	
-	while (nptr[i] >= 48 && nptr[i] <= 57)
-		sum = (sum * 10) + (nptr[i++] - 48);
-	return (sign * sum);
+	gettimeofday(&time, NULL);
+	curr_time = (time.tv_sec) * 1000 + (time.tv_usec) / 1000;
+	pthread_mutex_lock(&p->s->print_mutex);
+	printf("%s%ldms\t%d %s\n\033[0m", color, curr_time - p->s->start_time, p->id, msg);
+	pthread_mutex_unlock(&p->s->print_mutex);
+	return (curr_time);
 }
 
-void	set_simulation_args(t_sim *s, char **args)
+// to check if a philo in another thread died
+int	check_death_philo(t_sim *s)
 {
-	int	i;
-	
-	s->num_philo = ft_atoi(args[0]);
-	s->ttd = ft_atoi(args[1]);
-	s->tte = ft_atoi(args[2]);
-	s->tts = ft_atoi(args[3]);
-	if (args[4])
-		s->num_eat = ft_atoi(args[4]);
-	s->p = (int *)malloc(sizeof(int) * s->num_philo);
-	s->f = (int *)malloc(sizeof(int) * s->num_philo);
-	i = -1;
-	while (++i < s->num_philo)
+	int exit;
+
+	exit = 0;
+	pthread_mutex_lock(&s->end_mutex);
+	if (s->end)
+		exit = 1;
+	pthread_mutex_unlock(&s->end_mutex);
+	return (exit);
+}
+
+// 
+int	check_ttd(t_philo *p)
+{
+	struct timeval	time;
+	size_t			curr_time;
+	size_t			last_meal;
+
+	gettimeofday(&time, NULL);
+	curr_time = (time.tv_sec) * 1000 + (time.tv_usec) / 1000;
+	last_meal = p->last_meal_time;
+	if (last_meal == 0)
+		last_meal = p->s->start_time;
+	if (curr_time - last_meal >= p->s->ttd)
 	{
-		s->p[i] = 1;
-		s->f[i] = 1;
+		if (check_death_philo(p->s))
+			return (0);
+		pthread_mutex_lock(&p->s->end_mutex);
+		p->s->end = 1;
+		pthread_mutex_unlock(&p->s->end_mutex);
+		pthread_mutex_lock(&p->s->print_mutex);
+		printf("\033[0;31m%ldms\t%d has died\n\033[0m", curr_time - p->s->start_time, p->id);		
+		pthread_mutex_unlock(&p->s->print_mutex);
+		return (0); // dead
 	}
+	// pthread_mutex_lock(&p->s->print_mutex);
+	// printf("\033[0;35mno death %d %ld\n\033[0m", p->id, curr_time - last_meal);
+	// pthread_mutex_unlock(&p->s->print_mutex);
+	
+	return (1);
 }
 
-void	*compute(void	*ptr)
+int	check_forks(t_sim *s, int i)
 {
-	int	*a;
-	int	sum;
-	
-	// acquiring the lock
-	// pthread_mutex_lock(&mutex);
-	
-	a = (int *)ptr;
-	sum = 0;
-	for (int i = 0; i < 1000000000; i++)
-		sum += *a;
+	int	free;
 
-	// releasing the lock 
-	// pthread_mutex_unlock(&mutex);
+	free = 0;
+	pthread_mutex_lock(&s->read_mutex);
+	if (s->forks[i] && s->forks[(i + 1) % s->num_philo])
+		free = 1;
+	pthread_mutex_unlock(&s->read_mutex);
+	return (free);
+}
+
+int	check_num_meals(t_philo *p)
+{
+	if (p->s->num_eat > 0)
+		if (p->num_meals == p->s->num_eat)
+			return (0); // reached meal limit
+	return (1);
+}
+
+void	*run_lifecycle(void	*ptr)
+{
+	t_sim	*s;
+	t_philo	*p;
+	int		i;
+	int		flip;
+	int		think;
+	char	temp[500];
+	int		fork1;
+	int		fork2;
 	
+	p = (t_philo *)ptr;
+	s = p->s;
+	i = p->id - 1;
+	flip = 0;
+	think = 0;
+	if (s->num_philo == 1)
+		usleep(s->ttd * 1000);
+	while (check_num_meals(p) && check_ttd(p) && !check_death_philo(s))
+	{
+		if ((i + flip) & 1)
+		{
+			// printf("flip = %d, i = %d\n", flip, i);
+			flip = !flip; // so it doesnt sleep in the next iter
+			think = 0;
+			print_timestamp(p, "is sleeping", BLUE);
+			usleep(s->tts * 1000);
+		}
+		// else if (s->forks[i] && s->forks[(i + 1) % s->num_philo])
+		else
+		{
+			fork1 = i;
+			fork2 = (i + 1) % s->num_philo;
+			// if (i == s->num_philo - 1)
+			// if (i & 1)
+			// {
+			// 	fork1 = (i + 1) % s->num_philo;
+			// 	fork2 = i;
+			// }
+			pthread_mutex_lock(&s->mutexes[fork1]);
+			s->forks[fork1] = 0;
+			sprintf(temp, "has taken fork %d", fork1 + 1);
+			if (check_death_philo(s) || !check_ttd(p))
+				break;
+			print_timestamp(p, temp, WHITE);
+			
+			pthread_mutex_lock(&s->mutexes[fork2]);
+			s->forks[fork2] = 0;
+			sprintf(temp, "has taken fork %d", fork2 + 1);
+			if (check_death_philo(s) || !check_ttd(p))
+				break;
+			print_timestamp(p, temp, WHITE);
+			
+			// print_timestamp(p->philo_no, s->start_time, "is sleeping");
+			// usleep(s->tts * 1000);
+			if (check_death_philo(s) || !check_ttd(p))
+				break;
+			flip = !flip;
+			think = 0;
+			p->last_meal_time = print_timestamp(p, "is eating", GREEN);
+			usleep(s->tte * 1000);
+			p->num_meals++;
+			
+			// sprintf(temp, "is releasing fork %d", i + 1);
+			// print_timestamp(p, temp, NULL);
+			// sprintf(temp, "is releasing fork %d", ((i + 1) % s->num_philo) + 1);
+			// print_timestamp(p, temp, NULL);
+			s->forks[fork2] = 1;
+			s->forks[fork1] = 1;
+			pthread_mutex_unlock(&s->mutexes[fork2]);
+			pthread_mutex_unlock(&s->mutexes[fork1]);
+		}
+		if (!think)
+		{
+			if (check_death_philo(s))
+				break;
+			think = 1;
+			print_timestamp(p, "is thinking", YELLOW);
+		}
+	}
 	return (NULL);
 }
 
 void	testing(t_sim *s)
 {
-	(void)s;
-	pthread_t	p1;			// v
-	pthread_t	p2;			// v
-	pthread_mutex_t	mutex;  // has to be an array but where?
+	struct timeval	time;
+	pthread_t		*philos_th;
+	t_philo			*philos;
 	int	i;
-	int	a;
-	int	b;
-
-	a = 1;
-	b = 2;
-	i = -1;
 	
-	// init mutexes for all forks
+	philos = (t_philo *)malloc(sizeof(t_philo) * s->num_philo);
+	philos_th = (pthread_t *)malloc(sizeof(pthread_t) * s->num_philo);
+	s->mutexes = (pthread_mutex_t *)malloc(sizeof(pthread_mutex_t) * s->num_philo);
+	s->forks = (int *)malloc(sizeof(int) * s->num_philo);
+	
+	// init mutexes for all forks, set initial state for all philos
+	i = -1;
 	while (++i < s->num_philo)
-		pthread_mutex_init(&mutex, NULL);
+	{
+		pthread_mutex_init(&s->mutexes[i], NULL);
+		s->forks[i] = 1;
+		philos[i].s = s;
+		philos[i].id = i + 1;
+		philos[i].last_meal_time = 0;
+		philos[i].num_meals = 0;
+	}
+	
+	// set start time of simulation
+	gettimeofday(&time, NULL);
+	s->start_time = (time.tv_sec) * 1000 + (time.tv_usec) / 1000;
+	pthread_mutex_init(&s->end_mutex, NULL);
+	pthread_mutex_init(&s->print_mutex, NULL);
+	pthread_mutex_init(&s->read_mutex, NULL);
+	s->end = 0;
+	
 	// create threads for all philos
+	i = -1;
 	while (++i < s->num_philo)
-		pthread_create(&p1, NULL, compute, (void *)&a);
+		pthread_create(&philos_th[i], NULL, run_lifecycle, (void *)&philos[i]);
 	// wait for all threads
+	i = -1;
 	while (++i < s->num_philo)
-		pthread_join(p1, NULL);
+		pthread_join(philos_th[i], NULL);
+	
 	// destroying all mutexes
+	i = -1;
 	while (++i < s->num_philo)
-		pthread_mutex_destroy(&mutex);
-
+		pthread_mutex_destroy(&s->mutexes[i]);
+	pthread_mutex_destroy(&s->end_mutex);
+	pthread_mutex_destroy(&s->print_mutex);
+	pthread_mutex_destroy(&s->read_mutex);
+	
+	free(philos);
+	free(philos_th);
+	free(s->mutexes);
+	free(s->forks);
 }
 
 int	main(int argc, char **argv)
@@ -113,7 +249,8 @@ int	main(int argc, char **argv)
 				[number_of_times_each_philosopher_must_eat]");
 		return (1);
 	}
-	set_simulation_args(&s, argv + 1);
+	set_simulation_args(&s, argv);
 	testing(&s);
+	
 	return (0);
 }

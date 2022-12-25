@@ -6,13 +6,13 @@
 #    By: mfirdous <mfirdous@student.42abudhabi.a    +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2022/12/22 14:10:32 by mfirdous          #+#    #+#              #
-#    Updated: 2022/12/22 21:13:57 by mfirdous         ###   ########.fr        #
+#    Updated: 2022/12/23 14:42:35 by mfirdous         ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
 NAME	=	philo
 
-SRCS	=	srcs/main.c
+SRCS	=	srcs/main.c srcs/utils.c
 
 OBJS	=	${SRCS:.c=.o}
 
@@ -20,7 +20,8 @@ HEADER	=	include
 
 CC		=	gcc
 
-CFLAGS	=	 -Wall -Wextra -Werror -I ${HEADER} -Ofast
+# CFLAGS	=	 -Wall -Wextra -Werror -I ${HEADER} -Ofast 
+CFLAGS	=	 -Wall -Wextra -Werror -I ${HEADER} -Ofast -pthread
 
 .c.o:
 			${CC} ${CFLAGS} -c $< -o ${<:.c=.o} 
