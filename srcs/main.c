@@ -6,7 +6,7 @@
 /*   By: mfirdous <mfirdous@student.42abudhabi.a    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2022/12/22 14:21:57 by mfirdous          #+#    #+#             */
-/*   Updated: 2022/12/25 11:46:29 by mfirdous         ###   ########.fr       */
+/*   Updated: 2022/12/25 12:00:41 by mfirdous         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -18,6 +18,9 @@
  *	how to kill other threads - kill all if one dies?
  *  release all mutexes when exiting a thread
  *  find a way to check forks values without data race - pick up fork only if both are available
+ *	if num philos in a rotation is odd, prioritize last philo over first philo and vice versa over each rotation 
+ * 
+ * 
  */
 
 #include "philo.h"
@@ -134,11 +137,11 @@ void	*run_lifecycle(void	*ptr)
 			fork1 = i;
 			fork2 = (i + 1) % s->num_philo;
 			// if (i == s->num_philo - 1)
-			// if (i & 1)
-			// {
-			// 	fork1 = (i + 1) % s->num_philo;
-			// 	fork2 = i;
-			// }
+			if (i & 1)
+			{
+				fork1 = (i + 1) % s->num_philo;
+				fork2 = i;
+			}
 			pthread_mutex_lock(&s->mutexes[fork1]);
 			s->forks[fork1] = 0;
 			sprintf(temp, "has taken fork %d", fork1 + 1);
