@@ -6,7 +6,7 @@
 /*   By: mfirdous <mfirdous@student.42abudhabi.a    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2022/12/22 14:21:57 by mfirdous          #+#    #+#             */
-/*   Updated: 2022/12/26 01:33:04 by mfirdous         ###   ########.fr       */
+/*   Updated: 2022/12/26 00:47:30 by mfirdous         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -103,40 +103,6 @@ int	check_num_meals(t_philo *p)
 	return (1);
 }
 
-int	check_priority(t_philo *p, int i)
-{
-	pthread_mutex_lock(&p->s->meals_mutex);
-	if (i == 0)
-	{
-		if (p->s->num_meals[i] <= p->s->num_meals[p->s->num_philo - 1] && \
-			p->s->num_meals[i] <= p->s->num_meals[i + 1])
-		{
-			pthread_mutex_unlock(&p->s->meals_mutex);
-			return (1);
-		}
-	}
-	else if (i == p->s->num_philo - 1)
-	{
-		if (p->s->num_meals[i] <= p->s->num_meals[i - 1] && \
-			p->s->num_meals[i] <= p->s->num_meals[0])
-		{
-			pthread_mutex_unlock(&p->s->meals_mutex);
-			return (1);
-		}
-	}
-	else
-	{	
-		if (p->s->num_meals[i] <= p->s->num_meals[i - 1] && \
-			p->s->num_meals[i] <= p->s->num_meals[i + 1])
-		{
-			pthread_mutex_unlock(&p->s->meals_mutex);
-			return (1);
-		}
-	}
-	pthread_mutex_unlock(&p->s->meals_mutex);
-	return (0);
-}
-
 void	*run_lifecycle(void	*ptr)
 {
 	t_sim	*s;
@@ -178,7 +144,7 @@ void	*run_lifecycle(void	*ptr)
 			// setting forks as not free if both are available
 			pthread_mutex_lock(&s->mutexes[fork1]);
 			pthread_mutex_lock(&s->mutexes[fork2]);
-			if (s->forks[fork1] && s->forks[fork2] && check_priority(p, i))
+			if (s->forks[fork1] && s->forks[fork2])
 			{
 				if (check_death_philo(s) || !check_ttd(p))
 				{
@@ -202,9 +168,6 @@ void	*run_lifecycle(void	*ptr)
 				flip = !flip;
 				think = 0;
 				p->num_meals++;
-				pthread_mutex_lock(&s->meals_mutex);
-				s->num_meals[i] = p->num_meals;
-				pthread_mutex_unlock(&s->meals_mutex);
 				
 				// setting forks as free
 				pthread_mutex_lock(&s->mutexes[fork1]);
@@ -259,7 +222,6 @@ void	testing(t_sim *s)
 	
 	pthread_mutex_init(&s->end_mutex, NULL);
 	pthread_mutex_init(&s->print_mutex, NULL);
-	pthread_mutex_init(&s->meals_mutex, NULL);
 	s->end = 0;
 	
 	// set start time of simulation
@@ -280,7 +242,7 @@ void	testing(t_sim *s)
 		pthread_mutex_destroy(&s->mutexes[i]);
 	pthread_mutex_destroy(&s->end_mutex);
 	pthread_mutex_destroy(&s->print_mutex);
-	pthread_mutex_destroy(&s->meals_mutex);
+	// pthread_mutex_destroy(&s->read_mutex);
 	
 	free(philos);
 	free(philos_th);
