@@ -6,7 +6,7 @@
 /*   By: mfirdous <mfirdous@student.42abudhabi.a    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2022/12/22 14:21:57 by mfirdous          #+#    #+#             */
-/*   Updated: 2022/12/26 01:33:04 by mfirdous         ###   ########.fr       */
+/*   Updated: 2022/12/26 21:45:36 by mfirdous         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -52,7 +52,6 @@ int	check_death_philo(t_sim *s)
 	return (exit);
 }
 
-// 
 int	check_ttd(t_philo *p)
 {
 	struct timeval	time;
@@ -72,7 +71,7 @@ int	check_ttd(t_philo *p)
 		p->s->end = 1;
 		pthread_mutex_unlock(&p->s->end_mutex);
 		pthread_mutex_lock(&p->s->print_mutex);
-		printf("\033[0;31m%ldms\t%d has died\n\033[0m", curr_time - p->s->start_time, p->id);		
+		printf("\033[0;31m%ldms\t%d has died\n\033[0m", curr_time - p->s->start_time, p->id);
 		pthread_mutex_unlock(&p->s->print_mutex);
 		return (0); // dead
 	}
@@ -83,18 +82,6 @@ int	check_ttd(t_philo *p)
 	return (1);
 }
 
-// int	check_forks(t_sim *s, int i)
-// {
-// 	int	free;
-
-// 	free = 0;
-// 	pthread_mutex_lock(&s->read_mutex);
-// 	if (s->forks[i] && s->forks[(i + 1) % s->num_philo])
-// 		free = 1;
-// 	pthread_mutex_unlock(&s->read_mutex);
-// 	return (free);
-// }
-
 int	check_num_meals(t_philo *p)
 {
 	if (p->s->num_eat > 0)
@@ -103,38 +90,11 @@ int	check_num_meals(t_philo *p)
 	return (1);
 }
 
-int	check_priority(t_philo *p, int i)
+int	is_turn(t_philo *p, int fork1, int fork2)
 {
-	pthread_mutex_lock(&p->s->meals_mutex);
-	if (i == 0)
-	{
-		if (p->s->num_meals[i] <= p->s->num_meals[p->s->num_philo - 1] && \
-			p->s->num_meals[i] <= p->s->num_meals[i + 1])
-		{
-			pthread_mutex_unlock(&p->s->meals_mutex);
-			return (1);
-		}
-	}
-	else if (i == p->s->num_philo - 1)
-	{
-		if (p->s->num_meals[i] <= p->s->num_meals[i - 1] && \
-			p->s->num_meals[i] <= p->s->num_meals[0])
-		{
-			pthread_mutex_unlock(&p->s->meals_mutex);
-			return (1);
-		}
-	}
-	else
-	{	
-		if (p->s->num_meals[i] <= p->s->num_meals[i - 1] && \
-			p->s->num_meals[i] <= p->s->num_meals[i + 1])
-		{
-			pthread_mutex_unlock(&p->s->meals_mutex);
-			return (1);
-		}
-	}
-	pthread_mutex_unlock(&p->s->meals_mutex);
-	return (0);
+	if (p->s->fork_users[fork1] == p->id || p->s->fork_users[fork2] == p->id)
+		return (0);
+	return (1);
 }
 
 void	*run_lifecycle(void	*ptr)
@@ -175,10 +135,9 @@ void	*run_lifecycle(void	*ptr)
 				fork1 = (i + 1) % s->num_philo;
 				fork2 = i;
 			}
-			// setting forks as not free if both are available
 			pthread_mutex_lock(&s->mutexes[fork1]);
 			pthread_mutex_lock(&s->mutexes[fork2]);
-			if (s->forks[fork1] && s->forks[fork2] && check_priority(p, i))
+			if (s->forks[fork1] && s->forks[fork2] && is_turn(p, fork1, fork2))
 			{
 				if (check_death_philo(s) || !check_ttd(p))
 				{
@@ -202,9 +161,6 @@ void	*run_lifecycle(void	*ptr)
 				flip = !flip;
 				think = 0;
 				p->num_meals++;
-				pthread_mutex_lock(&s->meals_mutex);
-				s->num_meals[i] = p->num_meals;
-				pthread_mutex_unlock(&s->meals_mutex);
 				
 				// setting forks as free
 				pthread_mutex_lock(&s->mutexes[fork1]);
@@ -215,6 +171,8 @@ void	*run_lifecycle(void	*ptr)
 					pthread_mutex_unlock(&s->mutexes[fork1]);
 					break;
 				}
+				s->fork_users[fork1] = p->id;
+				s->fork_users[fork2] = p->id;
 				s->forks[fork1] = 1;
 				s->forks[fork2] = 1;
 			}
@@ -243,14 +201,16 @@ void	testing(t_sim *s)
 	philos_th = (pthread_t *)malloc(sizeof(pthread_t) * s->num_philo);
 	s->mutexes = (pthread_mutex_t *)malloc(sizeof(pthread_mutex_t) * s->num_philo);
 	s->forks = (int *)malloc(sizeof(int) * s->num_philo);
-	s->num_meals = (int *)malloc(sizeof(int) * s->num_philo);
-	
+	s->fork_users = (int *)malloc(sizeof(int) * s->num_philo);
+	// s->num_meals = (int *)malloc(sizeof(int) * s->num_philo);
+
 	// init mutexes for all forks, set initial state for all philos
 	i = -1;
 	while (++i < s->num_philo)
 	{
 		pthread_mutex_init(&s->mutexes[i], NULL);
 		s->forks[i] = 1;
+		s->fork_users[i] = -1;
 		philos[i].s = s;
 		philos[i].id = i + 1;
 		philos[i].last_meal_time = 0;
@@ -259,7 +219,6 @@ void	testing(t_sim *s)
 	
 	pthread_mutex_init(&s->end_mutex, NULL);
 	pthread_mutex_init(&s->print_mutex, NULL);
-	pthread_mutex_init(&s->meals_mutex, NULL);
 	s->end = 0;
 	
 	// set start time of simulation
@@ -280,13 +239,13 @@ void	testing(t_sim *s)
 		pthread_mutex_destroy(&s->mutexes[i]);
 	pthread_mutex_destroy(&s->end_mutex);
 	pthread_mutex_destroy(&s->print_mutex);
-	pthread_mutex_destroy(&s->meals_mutex);
 	
 	free(philos);
 	free(philos_th);
 	free(s->mutexes);
 	free(s->forks);
-	free(s->num_meals);
+	free(s->fork_users);
+	// free(s->num_meals);
 }
 
 int	main(int argc, char **argv)
