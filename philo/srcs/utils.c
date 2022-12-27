@@ -40,7 +40,7 @@ void	set_simulation_args(t_sim *s, char **args)
 	s->ttd = ft_atoi(args[2]);
 	s->tte = ft_atoi(args[3]);
 	s->tts = ft_atoi(args[4]);
-	s->num_eat = 0;
+	s->num_eat = -1;
 	if (args[5])
 		s->num_eat = ft_atoi(args[5]);
 }

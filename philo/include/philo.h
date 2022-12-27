@@ -6,7 +6,7 @@
 /*   By: mfirdous <mfirdous@student.42abudhabi.a    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2022/12/22 14:22:44 by mfirdous          #+#    #+#             */
-/*   Updated: 2022/12/26 21:45:15 by mfirdous         ###   ########.fr       */
+/*   Updated: 2022/12/27 14:56:55 by mfirdous         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -33,14 +33,12 @@ typedef struct s_sim
 	size_t			tts;
 	size_t			ttd;
 	int				num_eat;
-	size_t 			start_time;
-	int				*forks; // array of forks, len=num_philo, each element is a fork and the value is 0 or 1 -> free or being used
+	size_t			start_time;
+	int				*forks;
 	int				*fork_users;
-	int				*num_meals;
 	pthread_mutex_t	*mutexes;
 	pthread_mutex_t end_mutex;
 	pthread_mutex_t print_mutex;
-	
 	int				end;
 }			t_sim;
 
