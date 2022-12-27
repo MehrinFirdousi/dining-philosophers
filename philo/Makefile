@@ -6,7 +6,7 @@
 #    By: mfirdous <mfirdous@student.42abudhabi.a    +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2022/12/22 14:10:32 by mfirdous          #+#    #+#              #
-#    Updated: 2022/12/26 01:03:19 by mfirdous         ###   ########.fr        #
+#    Updated: 2022/12/27 00:32:40 by mfirdous         ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -30,7 +30,7 @@ ${NAME}:	${OBJS}
 			${CC} ${CFLAGS} ${OBJS} -o ${NAME}
 
 all:		${NAME}
-
+#			mv ${NAME} srcs
 clean:		
 			rm -f ${OBJS}
 
