@@ -1,0 +1,15 @@
+./philo 1 800 200 200 - should not eat and should die
+./philo 5 800 200 200 7 - no one should die
+./philo 4 410 200 200  - no one should die
+./philo 4 310 200 100 - should die
+./philo 3 700 200 200 - no one should die
+
+should die:
+./philo 3 1000 500 600 
+./philo 5 300 100 60
+./philo 5 200 100 60
+./philo 4 500 400 300 
+./philo 2 805 700 100 
+
+special case:
+./philo 2 805 700 100 1 - should show death - a philo dies while another eats or sleeps

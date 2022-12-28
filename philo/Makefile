@@ -6,7 +6,7 @@
 #    By: mfirdous <mfirdous@student.42abudhabi.a    +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2022/12/22 14:10:32 by mfirdous          #+#    #+#              #
-#    Updated: 2022/12/27 00:32:40 by mfirdous         ###   ########.fr        #
+#    Updated: 2022/12/28 20:17:47 by mfirdous         ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -20,7 +20,7 @@ HEADER	=	include
 
 CC		=	gcc
 
-# CFLAGS	=	 -Wall -Wextra -Werror -I ${HEADER} -Ofast 
+# CFLAGS	=	 -Wall -Wextra -Werror -I ${HEADER} 
 CFLAGS	=	 -Wall -Wextra -Werror -I ${HEADER} -Ofast -pthread
 
 .c.o:

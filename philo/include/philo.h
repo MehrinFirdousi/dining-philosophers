@@ -6,7 +6,7 @@
 /*   By: mfirdous <mfirdous@student.42abudhabi.a    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2022/12/22 14:22:44 by mfirdous          #+#    #+#             */
-/*   Updated: 2022/12/27 14:56:55 by mfirdous         ###   ########.fr       */
+/*   Updated: 2022/12/28 20:25:20 by mfirdous         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -36,8 +36,10 @@ typedef struct s_sim
 	size_t			start_time;
 	int				*forks;
 	int				*fork_users;
+	int				count_completed; // counter for num_eat 
 	pthread_mutex_t	*mutexes;
 	pthread_mutex_t end_mutex;
+	pthread_mutex_t meal_count_mutex;
 	pthread_mutex_t print_mutex;
 	int				end;
 }			t_sim;
@@ -48,9 +50,13 @@ typedef struct s_philo
 	int		id;
 	size_t	last_meal_time;
 	int		num_meals;
+	// pthread_mutex_t end_mutex;
+	// int		*end; // reference to simulation status
 }				t_philo;
 
-void	set_simulation_args(t_sim *s, char **args);
+t_philo	*set_simulation_args(t_sim *s, char **args);
+void	init_args(t_sim *s, t_philo *p);
 int		ft_atoi(const char *nptr);
+void	clean_up(t_sim *s, t_philo *p);
 
 #endif
