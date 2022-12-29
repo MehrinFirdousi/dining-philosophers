@@ -6,13 +6,13 @@
 #    By: mfirdous <mfirdous@student.42abudhabi.a    +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2022/12/22 14:10:32 by mfirdous          #+#    #+#              #
-#    Updated: 2022/12/28 20:17:47 by mfirdous         ###   ########.fr        #
+#    Updated: 2022/12/28 23:24:37 by mfirdous         ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
 NAME	=	philo
 
-SRCS	=	srcs/main.c srcs/utils.c
+SRCS	=	srcs/main.c srcs/setup.c srcs/lifecycle.c srcs/simulation.c
 
 OBJS	=	${SRCS:.c=.o}
 

@@ -6,7 +6,7 @@
 /*   By: mfirdous <mfirdous@student.42abudhabi.a    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2022/12/22 14:22:44 by mfirdous          #+#    #+#             */
-/*   Updated: 2022/12/28 20:25:20 by mfirdous         ###   ########.fr       */
+/*   Updated: 2022/12/28 22:36:46 by mfirdous         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -50,6 +50,8 @@ typedef struct s_philo
 	int		id;
 	size_t	last_meal_time;
 	int		num_meals;
+	int		sleep_flag;
+	int		think_flag;
 	// pthread_mutex_t end_mutex;
 	// int		*end; // reference to simulation status
 }				t_philo;
@@ -58,5 +60,18 @@ t_philo	*set_simulation_args(t_sim *s, char **args);
 void	init_args(t_sim *s, t_philo *p);
 int		ft_atoi(const char *nptr);
 void	clean_up(t_sim *s, t_philo *p);
+
+int	sleep_in_inc(t_philo *p, size_t time_to_sleep, char *msg, char *color, int change_time);
+void	update_meal_count(t_philo *p);
+int	check_num_meals(t_philo *p);
+int	check_death(t_philo *p);
+void	print_timestamp(t_philo *p, char *msg, char *color);
+size_t	get_time(void);
+int	is_turn(t_philo *p, int fork1, int fork2);
+
+// simulation
+int	pick_up_forks(t_sim *s, t_philo *p, int fork1, int fork2);
+int	release_forks(t_sim *s, t_philo *p, int fork1, int fork2);
+int	try_to_eat(t_sim *s, t_philo *p);
 
 #endif

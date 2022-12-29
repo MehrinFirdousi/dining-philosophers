@@ -66,6 +66,8 @@ void	init_args(t_sim *s, t_philo *p)
 		p[i].s = s;
 		p[i].id = i + 1;
 		p[i].num_meals = 0;
+		p[i].sleep_flag = 1;
+		p[i].think_flag = 0;
 	}
 	pthread_mutex_init(&s->end_mutex, NULL);
 	pthread_mutex_init(&s->print_mutex, NULL);
