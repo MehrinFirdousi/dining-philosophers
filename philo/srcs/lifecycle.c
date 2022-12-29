@@ -28,13 +28,8 @@ int	pick_up_forks(t_sim *s, t_philo *p, int fork1, int fork2)
 	pthread_mutex_unlock(&s->mutexes[fork1]);
 	if (!check_death(p))
 		return (0);
-	
-	if (sleep_in_inc(p, s->tte, "is eating", GREEN, 1) == 0)
+	if (!philo_eat(p))
 		return (0);
-	// p->last_meal_time = get_time();
-	// print_timestamp(p, "is eating", GREEN);
-	// usleep(s->tte * 1000);
-
 	p->sleep_flag = !p->sleep_flag;
 	p->think_flag = 1;
 	update_meal_count(p);
@@ -45,12 +40,6 @@ int	release_forks(t_sim *s, t_philo *p, int fork1, int fork2)
 {
 	pthread_mutex_lock(&s->mutexes[fork1]);
 	pthread_mutex_lock(&s->mutexes[fork2]);
-	if (!check_death(p))
-	{
-		pthread_mutex_unlock(&s->mutexes[fork2]);
-		pthread_mutex_unlock(&s->mutexes[fork1]);
-		return (0);
-	}
 	s->fork_users[fork1] = p->id;
 	s->fork_users[fork2] = p->id;
 	s->forks[fork1] = 1;
@@ -60,18 +49,16 @@ int	release_forks(t_sim *s, t_philo *p, int fork1, int fork2)
 
 int	try_to_eat(t_sim *s, t_philo *p)
 {
-	int fork1;
-	int fork2;
+	int	fork1;
+	int	fork2;
 
-	fork1 = p->id % s->num_philo;
+	fork1 = p->id % s->p_count;
 	fork2 = p->id - 1;
 	if (p->id & 1)
 	{
 		fork1 = p->id - 1;
-		fork2 = p->id % s->num_philo;
+		fork2 = p->id % s->p_count;
 	}
-	// if (!check_death(p))
-	// 	return (0);
 	pthread_mutex_lock(&s->mutexes[fork1]);
 	pthread_mutex_lock(&s->mutexes[fork2]);
 	if (s->forks[fork1] && s->forks[fork2] && is_turn(p, fork1, fork2))
@@ -86,18 +73,40 @@ int	try_to_eat(t_sim *s, t_philo *p)
 	return (1);
 }
 
-void	philo_sleep(t_sim *s, t_philo *p)
+// sleeps in increments of 1ms each time
+int	philo_eat(t_philo *p)
 {
-	p->sleep_flag = !p->sleep_flag;
-	p->think_flag = 1;
-	sleep_in_inc(p, s->tts, "is sleeping", BLUE, 0);
+	size_t	start_time;
+
+	start_time = get_time();
+	p->last_meal_time = start_time;
+	pthread_mutex_lock(&p->s->print_mutex);
+	printf("\033[0;32m%ldms\t%d is eating\n\033[0m", \
+	start_time - p->s->start_time, p->id);
+	pthread_mutex_unlock(&p->s->print_mutex);
+	while (get_time() - start_time < (size_t)p->s->tte)
+	{
+		usleep(500);
+		if (check_death(p) == 0)
+			return (0);
+	}
+	return (1);
 }
 
-int	philo_think(t_philo *p)
+int	philo_sleep(t_philo *p)
 {
-	if (!check_death(p))
-		return (0);
-	p->think_flag = 0;
-	print_timestamp(p, "is thinking", YELLOW);
+	size_t	start_time;
+
+	start_time = get_time();
+	pthread_mutex_lock(&p->s->print_mutex);
+	printf("\033[0;34m%ldms\t%d is sleeping\n\033[0m", \
+	start_time - p->s->start_time, p->id);
+	pthread_mutex_unlock(&p->s->print_mutex);
+	while (get_time() - start_time < (size_t)p->s->tts)
+	{
+		usleep(500);
+		if (check_death(p) == 0)
+			return (0);
+	}
 	return (1);
 }

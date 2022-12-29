@@ -10,17 +10,6 @@
 /*                                                                            */
 /* ************************************************************************** */
 
-/**
- * @todo
- *	
- * dying while eating - if someone else dies while someone is eating
- * usleep delay
- * norm
- * parsing - negative nums
- * prints after dying in the same second
- * store id in s->end and print dying in main thread
- */
-
 #include "philo.h"
 
 // returns current time in ms
@@ -35,36 +24,33 @@ size_t	get_time(void)
 void	print_timestamp(t_philo *p, char *msg, char *color)
 {
 	pthread_mutex_lock(&p->s->print_mutex);
-	printf("%s%ldms\t%d %s\n\033[0m", color, get_time() - p->s->start_time, p->id, msg);
+	printf("%s%ldms\t%d %s\n\033[0m", color, get_time() - p->s->start_time, \
+	p->id, msg);
 	pthread_mutex_unlock(&p->s->print_mutex);
 }
 
 void	*run_lifecycle(void	*philo)
 {
-	t_sim	*s;
 	t_philo	*p;
-	
+
 	p = (t_philo *)philo;
-	s = p->s;
-	if (s->num_philo == 1)
-		usleep(s->ttd * 1000);
+	check_one_philo(p->s);
 	while (check_num_meals(p) && check_death(p))
 	{
 		if ((p->id + p->sleep_flag) & 1)
 		{
-			p->sleep_flag = !p->sleep_flag; // so it doesnt sleep in the next iter
+			p->sleep_flag = !p->sleep_flag;
 			p->think_flag = 1;
-			sleep_in_inc(p, s->tts, "is sleeping", BLUE, 0);
-			// print_timestamp(p, "is sleeping", BLUE);
-			// usleep(s->tts * 1000);
+			if (!philo_sleep(p))
+				return (0);
 		}
-		else if (!try_to_eat(s, p))
-			break;
+		else if (!try_to_eat(p->s, p))
+			break ;
 		if (p->think_flag)
 		{
-			if (!check_death(p))
-				break;
 			p->think_flag = 0;
+			if (!check_death(p))
+				break ;
 			print_timestamp(p, "is thinking", YELLOW);
 		}
 	}
@@ -77,18 +63,21 @@ void	start_simulation(t_sim *s, t_philo *philos)
 	pthread_t		*philos_th;
 	int				i;
 
-	philos_th = (pthread_t *)malloc(sizeof(pthread_t) * s->num_philo);
+	philos_th = (pthread_t *)malloc(sizeof(pthread_t) * s->p_count);
 	gettimeofday(&time, NULL);
 	s->start_time = (time.tv_sec) * 1000 + (time.tv_usec) / 1000;
 	i = -1;
-	while (++i < s->num_philo)
+	while (++i < s->p_count)
 		philos[i].last_meal_time = s->start_time;
 	i = -1;
-	while (++i < s->num_philo)
+	while (++i < s->p_count)
 		pthread_create(&philos_th[i], NULL, run_lifecycle, (void *)&philos[i]);
 	i = -1;
-	while (++i < s->num_philo)
+	while (++i < s->p_count)
 		pthread_join(philos_th[i], NULL);
+	if (s->end)
+		printf("\033[0;31m%ldms\t%d has died\n\033[0m", \
+			get_time() - s->start_time, s->end);
 	clean_up(s, philos);
 	free(philos_th);
 }
@@ -108,6 +97,11 @@ int	main(int argc, char **argv)
 		return (1);
 	}
 	philos = set_simulation_args(&sim, argv);
+	if (!philos)
+	{
+		printf("Error: Arguments must be positive integers!");
+		return (0);
+	}
 	init_args(&sim, philos);
 	start_simulation(&sim, philos);
 	return (0);

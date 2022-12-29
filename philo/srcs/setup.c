@@ -36,20 +36,25 @@ int	ft_atoi(const char *nptr)
 
 t_philo	*set_simulation_args(t_sim *s, char **args)
 {
-	t_philo *philos;
+	t_philo	*philos;
 
-	s->num_philo = ft_atoi(args[1]);
+	s->p_count = ft_atoi(args[1]);
 	s->ttd = ft_atoi(args[2]);
 	s->tte = ft_atoi(args[3]);
 	s->tts = ft_atoi(args[4]);
 	s->num_eat = -1;
+	if (s->p_count < 0 || s->ttd < 0 || s->tte < 0 || s->tts < 0)
+		return (NULL);
 	if (args[5])
+	{
 		s->num_eat = ft_atoi(args[5]);
-	s->mutexes = (pthread_mutex_t *)malloc(sizeof(pthread_mutex_t) * s->num_philo);
-	s->forks = (int *)malloc(sizeof(int) * s->num_philo);
-	s->fork_users = (int *)malloc(sizeof(int) * s->num_philo);
-	philos = (t_philo *)malloc(sizeof(t_philo) * s->num_philo);
-	
+		if (s->num_eat < 0)
+			return (NULL);
+	}
+	s->mutexes = (t_mutex *)malloc(sizeof(t_mutex) * s->p_count);
+	s->forks = (int *)malloc(sizeof(int) * s->p_count);
+	s->fork_users = (int *)malloc(sizeof(int) * s->p_count);
+	philos = (t_philo *)malloc(sizeof(t_philo) * s->p_count);
 	return (philos);
 }
 
@@ -58,7 +63,7 @@ void	init_args(t_sim *s, t_philo *p)
 	int	i;
 
 	i = -1;
-	while (++i < s->num_philo)
+	while (++i < s->p_count)
 	{
 		pthread_mutex_init(&s->mutexes[i], NULL);
 		s->forks[i] = 1;
@@ -81,7 +86,7 @@ void	clean_up(t_sim *s, t_philo *p)
 	int	i;
 
 	i = -1;
-	while (++i < s->num_philo)
+	while (++i < s->p_count)
 		pthread_mutex_destroy(&s->mutexes[i]);
 	pthread_mutex_destroy(&s->end_mutex);
 	pthread_mutex_destroy(&s->print_mutex);
